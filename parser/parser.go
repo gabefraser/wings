@@ -14,6 +14,7 @@ import (
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -169,8 +170,13 @@ func (f *ConfigurationFile) Parse(path string, internal bool) error {
 			return nil
 		}
 
-		if _, err := os.Create(path); err != nil {
-			return errors.WithStack(err)
+		b := strings.TrimSuffix(path, filepath.Base(path))
+		if err := os.MkdirAll(b, 0755); err != nil {
+			return errors.Wrap(err, "failed to create base directory for missing configuration file")
+		} else {
+			if _, err := os.Create(path); err != nil {
+				return errors.Wrap(err, "failed to create missing configuration file")
+			}
 		}
 
 		return f.Parse(path, true)
@@ -437,8 +443,7 @@ func (f *ConfigurationFile) parsePropertiesFile(path string) error {
 	scanner := bufio.NewScanner(f2)
 	for scanner.Scan() {
 		text := scanner.Text()
-
-		if text[0] != '#' {
+		if len(text) > 0 && text[0] != '#' {
 			break
 		}
 
